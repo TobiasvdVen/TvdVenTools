@@ -30,7 +30,7 @@
         });
 
       output = systems // {
-        inherit tt;
+        cheese = tt;
       };
     in
       output;
