@@ -8,45 +8,24 @@
     crane.url = "github:ipetkov/crane";
   };
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils, crane }:
+  outputs = { self, nixpkgs, rust-overlay, flake-utils, crane  }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        overlays = [ (import rust-overlay) ];
-        pkgs = import nixpkgs {
-          inherit system overlays;
-        };
+        tt = import ./nix/tt.nix;
 
-        rust_toolchain = pkgs.rust-bin.selectLatestNightlyWith (toolchain:
-          toolchain.default.override {
-            extensions = [ "rust-src" "rust-analyzer" ];
-          });
-
-        default_crate_lib = crane.mkLib pkgs;
-        crane_lib = default_crate_lib.overrideToolchain rust_toolchain;
-
-        crane_args = {
+        crane-args = {
           pname = "tt";
           version = "0.1.0";
-
           src = ./tt;
-
-          strictDeps = true;
         };
 
-        crane_and_cargo = crane_args // {
-          cargoArtifacts = crane_lib.buildDepsOnly crane_args;
-        };
-
-        tt_build = crane_lib.buildPackage crane_and_cargo;
+        tt-output = tt.mkRustOutput { inherit nixpkgs system rust-overlay crane crane-args; };
       in
       {
-        devShells.default = pkgs.mkShell {
-          buildInputs = [
-            rust_toolchain
-            tt_build
-          ];
+        devShells.default = tt-output.pkgs.mkShell {
+          buildInputs = tt-output.buildInputs;
         };
 
-        packages.default = tt_build;
+        packages.default = tt-output.build;
       });
 }
