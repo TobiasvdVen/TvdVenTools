@@ -9,23 +9,29 @@
   };
 
   outputs = { self, nixpkgs, rust-overlay, flake-utils, crane  }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        tt = import ./nix/tt.nix;
+    let
+      tt = import ./nix/tt.nix;
+      systems = flake-utils.lib.eachDefaultSystem (system:
+        let
+          crane-args = {
+            pname = "tt";
+            version = "0.1.0";
+            src = ./tt;
+          };
 
-        crane-args = {
-          pname = "tt";
-          version = "0.1.0";
-          src = ./tt;
-        };
+          tt-output = tt.mkRustOutput { inherit nixpkgs system rust-overlay crane crane-args; };
+        in
+        {
+          devShells.default = tt-output.pkgs.mkShell {
+            buildInputs = tt-output.buildInputs;
+          };
 
-        tt-output = tt.mkRustOutput { inherit nixpkgs system rust-overlay crane crane-args; };
-      in
-      {
-        devShells.default = tt-output.pkgs.mkShell {
-          buildInputs = tt-output.buildInputs;
-        };
+          packages.default = tt-output.build;
+        });
 
-        packages.default = tt-output.build;
-      });
-}
+      output = systems // {
+        inherit tt;
+      };
+    in
+      output;
+    }
